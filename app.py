@@ -1,8 +1,8 @@
 from flask import Flask, redirect,render_template, request, url_for
-from flask_login import LoginManager, login_user, login_required, logout_user
+from flask_login import LoginManager, login_user, login_required, logout_user, current_user
 from werkzeug.security import generate_password_hash, check_password_hash
 
-from models import db, User
+from models import db, User, Usage
 
 app = Flask(__name__)
 app.secret_key = 'your_secret_key'
@@ -52,10 +52,30 @@ def login():
     
     return render_template("login.html")
 
-@app.route('/dashboard')
+@app.route('/dashboard', methods=["GET", "POST"])
 @login_required
 def dashboard():
-    return render_template('dashboard.html')
+    if request.method == "POST":
+        remaining = float(request.form["data"])
+        usage = Usage(
+            remaining_data=remaining,
+            user_id=current_user.id
+        )
+
+        db.session.add(usage)
+        db.session.commit()
+
+    latest_usage = (
+        Usage.query
+        .filter_by(user_id=current_user.id)
+        .order_by(Usage.updated_at.desc())
+        .first()
+    )
+
+    return render_template(
+        'dashboard.html',
+        latest_usage=latest_usage
+    )
 
 @app.route("/logout")
 @login_required

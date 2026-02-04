@@ -1,19 +1,14 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <h2>Dashboard</h2>
-    <title>Data Usage App</title>
-</head>
-<body>
-    <p>You are logged in!</p>    
-    <form method="post">
-        <input type="number" step="0.01" name="data" required>
-        <button type="submit">Check</button>
-    </form>
+<h2>Dashboard</h2>
 
-    {% if result %}
-        <p>{{ result }}</p>
-    {% endif %}
-    <a href="/logout">Logout</a>
-</body>
-</html>
+<form method="post">
+    <input type="number" name="data" id="data" step="0.01" required>
+    <button type="submit">Submit Data</button>
+</form>
+
+{% if usage %}
+    <p>
+        Latest remaining data: {{ usage.remaining_data }} GB <br>
+        Updated at: {{ usage.updated_at }}
+    </p>
+{% else %}
+<a href="/logout">Logout</a>
