@@ -1,89 +1,82 @@
-from flask import Flask, redirect,render_template, request, url_for
-from flask_login import LoginManager, login_user, login_required, logout_user, current_user
+from flask import Flask, request, jsonify
+from flask_login import LoginManager, login_user, login_required, current_user
 from werkzeug.security import generate_password_hash, check_password_hash
 
 from models import db, User, Usage
+from config import Config
 
 app = Flask(__name__)
-app.secret_key = 'your_secret_key'
+app.config.from_object(Config)
 
-app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///app.db"
-app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 db.init_app(app)
 
 login_manager = LoginManager()
-login_manager.login_view = 'login'
 login_manager.init_app(app)
 
 @login_manager.user_loader
 def load_user(user_id):
     return User.query.get(int(user_id))
 
-@app.route("/register",methods=["GET","POST"])
+
+@app.route("/api/register", methods=["POST"])
 def register():
-    if request.method == "POST":
-        email = request.form.get("email")
-        password = generate_password_hash(request.form.get("password"), method='sha256')
+    data = request.json
 
-        if User.query.filter_by(email=email).first():
-            return "User already exists"
-        
-        user = User(email=email,password=password)
-        db.session.add(user)
-        db.session.commit()
-        
-        return redirect("/login")
-    
-    return render_template("register.html")
+    if User.query.filter_by(email=data["email"]).first():
+        return jsonify({"error": "User exists"}), 400
 
-@app.route("/login", methods=["GET", "POST"])
+    user = User(
+        email=data["email"],
+        password=generate_password_hash(data["password"])
+    )
+
+    db.session.add(user)
+    db.session.commit()
+
+    return jsonify({"message": "User registered"})
+
+@app.route("/api/login", methods=["POST"])
 def login():
-    if request.method == "POST":
-        email = request.form.get("email")
-        password = request.form.get("password")
+    data = request.json
+    user = User.query.filter_by(email=data["email"]).first()
 
-        user = User.query.filter_by(email=email).first()
+    if not user or not check_password_hash(user.password, data["password"]):
+        return jsonify({"error": "Invalid credentials"}), 401
 
-        if user and check_password_hash(user.password, password):
-            login_user(user)
-            return redirect(url_for("dashboard"))
-        
-        return "Invalid credentials"
-    
-    return render_template("login.html")
+    login_user(user)
+    return jsonify({"message": "Logged in"})
 
-@app.route('/dashboard', methods=["GET", "POST"])
+
+@app.route("/api/usage", methods=["POST"])
 @login_required
-def dashboard():
-    if request.method == "POST":
-        remaining = float(request.form["data"])
-        usage = Usage(
-            remaining_data=remaining,
-            user_id=current_user.id
-        )
+def add_usage():
+    data = request.json
 
-        db.session.add(usage)
-        db.session.commit()
+    usage = Usage(
+        remaining_data=data["remaining_data"],
+        user_id=current_user.id
+    )
 
-    latest_usage = (
+    db.session.add(usage)
+    db.session.commit()
+
+    return jsonify({"message": "Usage saved"})
+
+
+@app.route("/api/usage/latest", methods=["GET"])
+@login_required
+def latest_usage():
+    usage = (
         Usage.query
         .filter_by(user_id=current_user.id)
         .order_by(Usage.updated_at.desc())
         .first()
     )
 
-    return render_template(
-        'dashboard.html',
-        latest_usage=latest_usage
-    )
+    if not usage:
+        return jsonify({"message": "No data yet"})
 
-@app.route("/logout")
-@login_required
-def logout():
-    logout_user()
-    return redirect(url_for("login"))
-
-if __name__ == "__main__":
-    with app.app_context():
-        db.create_all()
-    app.run()
+    return jsonify({
+        "remaining_data": usage.remaining_data,
+        "updated_at": usage.updated_at.isoformat()
+    })

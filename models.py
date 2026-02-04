@@ -1,5 +1,5 @@
 from flask_sqlalchemy import SQLAlchemy
-from flask_login  import UserMixin
+from flask_login import UserMixin
 from datetime import datetime
 
 db = SQLAlchemy()
@@ -7,9 +7,8 @@ db = SQLAlchemy()
 class User(UserMixin, db.Model):
     id = db.Column(db.Integer, primary_key=True)
     email = db.Column(db.String(150), unique=True, nullable=False)
-    password = db.Column(db.String(200),nullable=False)
+    password = db.Column(db.String(200), nullable=False)
 
-    usages = db.relationship('Usage', backref='user', lazy=True)
 
 class Usage(db.Model):
     id = db.Column(db.Integer, primary_key=True)
