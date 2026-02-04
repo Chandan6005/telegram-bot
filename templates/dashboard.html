@@ -1,11 +1,11 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+    <h2>Dashboard</h2>
     <title>Data Usage App</title>
 </head>
 <body>
-    <h2>Data Usage Checker</h2>
-    
+    <p>You are logged in!</p>    
     <form method="post">
         <input type="number" step="0.01" name="data" required>
         <button type="submit">Check</button>
@@ -14,5 +14,6 @@
     {% if result %}
         <p>{{ result }}</p>
     {% endif %}
+    <a href="/logout">Logout</a>
 </body>
 </html>
